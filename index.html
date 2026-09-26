@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>그어아 ver0.1</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #8edfff;
+    font-family: Arial, sans-serif;
+    color: #183b4d;
+}
+
+header {
+    background: rgba(255,255,255,0.9);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 3px 15px rgba(0,0,0,.15);
+}
+
+.logo {
+    font-size: 23px;
+    font-weight: bold;
+}
+
+.money {
+    background: #fff5a8;
+    border-radius: 15px;
+    padding: 9px 15px;
+    font-weight: bold;
+}
+
+main {
+    max-width: 1100px;
+    margin: auto;
+    padding: 18px;
+}
+
+.game {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 18px;
+}
+
+.island-box {
+    position: relative;
+    background: #58c9f1;
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow: 0 10px 35px rgba(0,0,0,.2);
+}
+
+.island-image {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* --------------------------------
+   집 변화 영역
+-------------------------------- */
+
+.house-stage {
+    position: absolute;
+
+    /*
+      원본 이미지에서 빨간 지붕 집 위치
+    */
+    left: 31.5%;
+    top: 39%;
+    width: 17%;
+    aspect-ratio: 1 / 1;
+
+    transform-origin: center bottom;
+    pointer-events: none;
+}
+
+/*
+  원래 집을 살짝 가리는 잔디 영역
+  업그레이드된 집이 그 위에 나타남
+*/
+.house-cover {
+    position: absolute;
+    inset: -8%;
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(91,170,67,.95) 0%,
+            rgba(91,170,67,.95) 55%,
+            transparent 70%
+        );
+    opacity: 0;
+    transition: opacity .4s;
+}
+
+/* 업그레이드된 집 */
+.house {
+    position: absolute;
+    left: 16%;
+    bottom: 12%;
+    width: 68%;
+    height: 58%;
+    background: #fff8dc;
+    border: 4px solid #71482e;
+    border-radius: 5px 5px 12px 12px;
+    box-shadow: 4px 5px 0 rgba(0,0,0,.15);
+}
+
+/* 지붕 */
+.house::before {
+    content: "";
+    position: absolute;
+    left: -14%;
+    top: -42%;
+    width: 128%;
+    height: 65%;
+    background: #e45d3e;
+    border: 4px solid #71482e;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* 문 */
+.house::after {
+    content: "";
+    position: absolute;
+    width: 18%;
+    height: 42%;
+    bottom: 0;
+    left: 41%;
+    background: #8c5a36;
+    border: 3px solid #603c26;
+}
+
+/* 창문 */
+.window {
+    position: absolute;
+    width: 20%;
+    height: 24%;
+    background: #82d9ed;
+    border: 3px solid #603c26;
+    top: 25%;
+}
+
+.window.left {
+    left: 12%;
+}
+
+.window.right {
+    right: 12%;
+}
+
+.house-level-text {
+    position: absolute;
+    bottom: -25%;
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2px 3px #000;
+}
+
+/*
+  Lv별 변화
+*/
+
+.house-stage[data-level="1"] {
+    display: none;
+}
+
+.house-stage[data-level="2"] .house {
+    transform: scale(1.05);
+}
+
+.house-stage[data-level="2"] .house::before {
+    background: #e45d3e;
+}
+
+.house-stage[data-level="3"] .house {
+    transform: scale(1.12);
+}
+
+.house-stage[data-level="3"] .house::before {
+    background: #d94b35;
+}
+
+.house-stage[data-level="3"]::after {
+    content: "🌷";
+    position: absolute;
+    left: -5%;
+    bottom: 5%;
+    font-size: 22px;
+}
+
+.house-stage[data-level="4"] .house {
+    transform: scale(1.2);
+    border-width: 5px;
+}
+
+.house-stage[data-level="4"] .house::before {
+    background: #c63e30;
+}
+
+.house-stage[data-level="4"]::after {
+    content: "🌷 🪴";
+    position: absolute;
+    left: -15%;
+    bottom: 0;
+    font-size: 20px;
+}
+
+.house-stage[data-level="5"] .house {
+    transform: scale(1.3);
+    box-shadow:
+        0 0 0 4px #ffe88b,
+        7px 8px 0 rgba(0,0,0,.18);
+}
+
+.house-stage[data-level="5"] .house::before {
+    background: #b9362e;
+}
+
+.house-stage[data-level="5"]::after {
+    content: "🌷 🪴 🌷";
+    position: absolute;
+    left: -23%;
+    bottom: -2%;
+    font-size: 21px;
+}
+
+/* 건설 완료 모션 */
+
+.house-stage.complete {
+    animation: upgradePop 1s ease;
+}
+
+@keyframes upgradePop {
+    0% {
+        transform: scale(.8) rotate(-3deg);
+        filter: brightness(1);
+    }
+
+    35% {
+        transform: scale(1.18) rotate(3deg);
+        filter: brightness(1.7);
+    }
+
+    60% {
+        transform: scale(.96) rotate(-2deg);
+    }
+
+    80% {
+        transform: scale(1.06);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+/* 반짝임 */
+
+.sparkle {
+    position: absolute;
+    left: 31%;
+    top: 37%;
+    width: 25%;
+    height: 25%;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.sparkle.active {
+    animation: sparkle 1.2s ease-out;
+}
+
+@keyframes sparkle {
+    0% {
+        opacity: 0;
+        transform: scale(.4) rotate(0);
+    }
+
+    30% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.6) rotate(180deg);
+    }
+}
+
+.sparkle::before,
+.sparkle::after {
+    content: "✦";
+    position: absolute;
+    color: white;
+    text-shadow:
+        0 0 5px #fff,
+        0 0 12px #ffe66d;
+    font-size: 40px;
+}
+
+.sparkle::before {
+    left: 15%;
+    top: 10%;
+}
+
+.sparkle::after {
+    right: 10%;
+    bottom: 5%;
+    font-size: 28px;
+}
+
+/* --------------------------------
+   오른쪽 패널
+-------------------------------- */
+
+.panel {
+    background: rgba(255,255,255,.92);
+    border-radius: 22px;
+    padding: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,.15);
+}
+
+.panel h2 {
+    margin-top: 0;
+}
+
+.status {
+    background: #eefaff;
+    padding: 14px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+}
+
+.level {
+    font-size: 27px;
+    font-weight: bold;
+}
+
+.progress-wrap {
+    margin-top: 12px;
+    background: #d5e4e9;
+    height: 12px;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    width: 0%;
+    background: #49b6e8;
+    transition: width .3s;
+}
+
+.timer {
+    margin-top: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+button {
+    width: 100%;
+    border: none;
+    border-radius: 15px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #49b6e8;
+    color: white;
+    transition: .2s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+    transform: none;
+}
+
+.earn {
+    margin-top: 12px;
+    background: #8bdc83;
+}
+
+.info {
+    margin-top: 15px;
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: .8;
+}
+
+.log {
+    margin-top: 15px;
+    max-height: 180px;
+    overflow-y: auto;
+    background: #f5fbfd;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.log div {
+    padding: 5px 0;
+    border-bottom: 1px solid #dcecef;
+}
+
+/* 모바일 */
+
+@media(max-width:800px) {
+    .game {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        position: static;
+    }
+
+    .panel {
+        order: 2;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div>
+        <div class="logo">🏝️ 그어아</div>
+        <div class="sub">섬을 조금씩 키워보세요</div>
+    </div>
+
+    <div class="money">
+        💰 <span id="money">1000</span>
+    </div>
+</header>
+
+
+<main>
+
+<div class="game">
+
+    <!-- 섬 -->
+
+    <div class="island-box">
+
+        <!-- 같은 폴더에 island.png를 넣으세요 -->
+        <img
+            src="island.png"
+            class="island-image"
+            alt="그어아 섬"
+        >
+
+        <!-- 업그레이드된 집 -->
+        <div
+            class="house-stage"
+            id="houseStage"
+            data-level="1"
+        >
+            <div class="house-cover"></div>
+
+            <div class="house">
+                <div class="window left"></div>
+                <div class="window right"></div>
+            </div>
+
+            <div class="house-level-text">
+                Lv.<span id="imageLevel">1</span>
+            </div>
+        </div>
+
+        <div class="sparkle" id="sparkle"></div>
+
+    </div>
+
+
+    <!-- 관리 패널 -->
+
+    <div class="panel">
+
+        <h2>🏠 집</h2>
+
+        <div class="status">
+
+            <div class="level">
+                Lv.<span id="level">1</span>
+            </div>
+
+            <div>
+                작은 섬의 집
+            </div>
+
+            <div class="progress-wrap">
+                <div
+                    class="progress"
+                    id="progress"
+                ></div>
+            </div>
+
+            <div class="timer" id="timer">
+                업그레이드 가능
+            </div>
+
+        </div>
+
+        <button
+            id="upgradeButton"
+            onclick="startUpgrade()"
+        >
+            🛠️ 업그레이드
+        </button>
+
+        <button
+            class="earn"
+            onclick="earnMoney()"
+        >
+            🪓 나무 베기 +100
+        </button>
+
+        <div class="info">
+            💡 나무를 베어서 돈을 모으고<br>
+            돈을 사용해 집을 업그레이드하세요.<br><br>
+
+            ⏱️ 업그레이드는 실제로 <b>20초</b>가 걸립니다.
+        </div>
+
+        <div class="log" id="log"></div>
+
+    </div>
+
+</div>
+
+</main>
+
+
+<script>
+
+/* =========================================
+   저장 데이터
+========================================= */
+
+let money = Number(localStorage.getItem("geoa_money")) || 1000;
+let level = Number(localStorage.getItem("geoa_house_level")) || 1;
+
+let upgrading = false;
+let upgradeEnd = Number(localStorage.getItem("geoa_upgrade_end")) || 0;
+
+
+/* =========================================
+   업그레이드 가격
+========================================= */
+
+function getUpgradeCost() {
+
+    return level * 500;
+
+}
+
+
+/* =========================================
+   화면 갱신
+========================================= */
+
+function updateUI() {
+
+    document.getElementById("money").textContent =
+        money.toLocaleString();
+
+    document.getElementById("level").textContent =
+        level;
+
+    document.getElementById("imageLevel").textContent =
+        level;
+
+    document.getElementById("houseStage").dataset.level =
+        level;
+
+    const button =
+        document.getElementById("upgradeButton");
+
+    if (level >= 5) {
+
+        button.textContent =
+            "🏆 최고 레벨 달성";
+
+        button.disabled = true;
+
+    } else if (!upgrading) {
+
+        button.textContent =
+            `🛠️ 업그레이드 (${getUpgradeCost().toLocaleString()}💰)`;
+
+        button.disabled = false;
+
+    }
+
+    localStorage.setItem(
+        "geoa_money",
+        money
+    );
+
+    localStorage.setItem(
+        "geoa_house_level",
+        level
+    );
+
+}
+
+
+/* =========================================
+   돈 벌기
+========================================= */
+
+function earnMoney() {
+
+    if (upgrading) {
+
+        addLog("🏗️ 집을 업그레이드하는 중입니다.");
+
+        return;
+
+    }
+
+    money += 100;
+
+    addLog("🪓 나무를 베어 100💰을 벌었습니다.");
+
+    updateUI();
+
+}
+
+
+/* =========================================
+   업그레이드 시작
+========================================= */
+
+function startUpgrade() {
+
+    if (level >= 5) return;
+
+    if (upgrading) return;
+
+    const cost = getUpgradeCost();
+
+    if (money < cost) {
+
+        addLog(
+            `💸 돈이 부족합니다. ${cost.toLocaleString()}💰 필요합니다.`
+        );
+
+        return;
+
+    }
+
+    money -= cost;
+
+    upgrading = true;
+
+    /*
+      현재 시각 + 20초
+    */
+
+    upgradeEnd =
+        Date.now() + 20000;
+
+    localStorage.setItem(
+        "geoa_upgrade_end",
+        upgradeEnd
+    );
+
+    addLog(
+        `🏗️ 집 Lv.${level + 1} 업그레이드를 시작했습니다!`
+    );
+
+    updateUI();
+
+}
+
+
+/* =========================================
+   건설 진행
+========================================= */
+
+function updateConstruction() {
+
+    if (!upgrading) return;
+
+    const now = Date.now();
+
+    const remaining =
+        upgradeEnd - now;
+
+    const total = 20000;
+
+    if (remaining <= 0) {
+
+        finishUpgrade();
+
+        return;
+
+    }
+
+    const percent =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                ((total - remaining) / total) * 100
+            )
+        );
+
+    document.getElementById("progress").style.width =
+        percent + "%";
+
+    const seconds =
+        Math.ceil(remaining / 1000);
+
+    document.getElementById("timer").textContent =
+        `🏗️ 건설 중... ${seconds}초`;
+
+    document.getElementById("upgradeButton").disabled =
+        true;
+
+}
+
+
+/* =========================================
+   업그레이드 완료
+========================================= */
+
+function finishUpgrade() {
+
+    upgrading = false;
+
+    level++;
+
+    localStorage.removeItem(
+        "geoa_upgrade_end"
+    );
+
+    document.getElementById("progress").style.width =
+        "100%";
+
+    document.getElementById("timer").textContent =
+        "✨ 업그레이드 완료!";
+
+    const house =
+        document.getElementById("houseStage");
+
+    const sparkle =
+        document.getElementById("sparkle");
+
+
+    /*
+      완료 모션
+    */
+
+    house.classList.remove("complete");
+
+    /*
+      브라우저가 이전 클래스를 다시 인식하도록 함
+    */
+
+    void house.offsetWidth;
+
+    house.classList.add("complete");
+
+    sparkle.classList.remove("active");
+
+    void sparkle.offsetWidth;
+
+    sparkle.classList.add("active");
+
+
+    addLog(
+        `🎉 집이 Lv.${level}로 업그레이드되었습니다!`
+    );
+
+    updateUI();
+
+    setTimeout(() => {
+
+        house.classList.remove("complete");
+
+    }, 1200);
+
+}
+
+
+/* =========================================
+   로그
+========================================= */
+
+function addLog(text) {
+
+    const log =
+        document.getElementById("log");
+
+    const div =
+        document.createElement("div");
+
+    const time =
+        new Date().toLocaleTimeString(
+            "ko-KR",
+            {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            }
+        );
+
+    div.textContent =
+        `[${time}] ${text}`;
+
+    log.prepend(div);
+
+}
+
+
+/* =========================================
+   새로고침해도 건설 유지
+========================================= */
+
+function restoreUpgrade() {
+
+    if (!upgradeEnd) return;
+
+    if (Date.now() < upgradeEnd) {
+
+        upgrading = true;
+
+        addLog(
+            "🏗️ 진행 중이던 업그레이드를 이어갑니다."
+        );
+
+    } else {
+
+        upgrading = true;
+
+        finishUpgrade();
+
+    }
+
+}
+
+
+/* =========================================
+   시작
+========================================= */
+
+updateUI();
+
+restoreUpgrade();
+
+
+/*
+  0.1초마다 건설 상태 확인
+*/
+
+setInterval(
+    updateConstruction,
+    100
+);
+
+</script>
+
+</body>
+  </html>
